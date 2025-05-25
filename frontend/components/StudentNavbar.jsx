@@ -118,65 +118,79 @@ const StudentNavbar = ({ isMobile }) => {
   };
 
   return (
-    <nav className="w-full bg-gradient-to-b from-indigo-800 to-indigo-900 py-3 px-6 h-full flex items-center justify-end shadow">
-      <div className="space-x-4">
+    <nav className="w-full bg-gradient-to-b from-gray-800/90 via-gray-800/70 to-gray-900/90 backdrop-blur-lg py-3 px-6 h-full flex items-center justify-end shadow-2xl border-b border-gray-600/30 relative overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-2 right-10 w-8 h-8 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute bottom-2 left-10 w-6 h-6 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+      </div>
+      
+      <div className="space-x-4 relative z-10">
         {loading ? (
           <div className="text-sm text-white">Loading...</div>
         ) : user ? (
           <div className="relative" ref={profileMenuRef}>
             <button
               type="button"
-              className="flex items-center cursor-pointer text-sm gap-2 font-medium text-white hover:text-gray-100 focus:outline-none"
+              className="flex items-center cursor-pointer text-sm gap-2 font-medium text-white hover:text-gray-100 focus:outline-none transition-all duration-300 transform hover:scale-105 p-2 rounded-lg hover:bg-gray-700/60"
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
             >
-              <div className="bg-indigo-600 text-white p-2 rounded-full">
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white p-2 rounded-full relative">
                 <Building className="size-5" />
+                <div className="absolute inset-0 rounded-full bg-blue-400/30 blur-lg"></div>
               </div>
               <span>{user.name || "Hostel Owner"}</span>
               <ChevronDown className={`w-4 h-4 text-white ${profileMenuOpen ? 'transform rotate-180' : ''} transition-transform duration-200`} />
             </button>
             
             {profileMenuOpen && (
-              <div className="absolute right-0 z-10 mt-3 w-80 overflow-hidden rounded-lg bg-gradient-to-b from-indigo-800 to-indigo-900 ring-1 shadow-lg ring-indigo-900/50">
-                <div className="p-4">
-                  <div className="border-b border-indigo-700 pb-3 mb-3">
+              <div className="absolute right-0 z-10 mt-3 w-80 overflow-hidden rounded-lg bg-gradient-to-b from-gray-800/90 via-gray-800/70 to-gray-900/90 backdrop-blur-lg ring-1 shadow-2xl ring-gray-600/50 border border-gray-600/30">
+                {/* Background pattern for dropdown */}
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute top-5 right-5 w-16 h-16 bg-blue-500 rounded-full mix-blend-multiply filter blur-2xl animate-pulse"></div>
+                  <div className="absolute bottom-5 left-5 w-12 h-12 bg-purple-500 rounded-full mix-blend-multiply filter blur-2xl animate-pulse delay-1500"></div>
+                </div>
+                
+                <div className="p-4 relative z-10">
+                  <div className="border-b border-gray-600/50 pb-3 mb-3">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="bg-indigo-600 text-white p-3 rounded-full">
+                      <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white p-3 rounded-full relative">
                         <Building className="size-6" />
+                        <div className="absolute inset-0 rounded-full bg-blue-400/30 blur-lg"></div>
                       </div>
                       <div>
                         <p className="font-semibold text-white">{user.name}</p>
-                        <p className="text-sm text-indigo-200">Hostel Owner</p>
+                        <p className="text-sm text-gray-300">Hostel Owner</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2 text-sm">
-                      <Mail className="size-4 text-indigo-200" />
+                      <Mail className="size-4 text-gray-300" />
                       <span className="text-white">{user.email}</span>
                     </div>
                     {user.phoneNumber && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Phone className="size-4 text-indigo-200" />
+                        <Phone className="size-4 text-gray-300" />
                         <span className="text-white">{user.phoneNumber}</span>
                       </div>
                     )}
                     {user.businessName && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Briefcase className="size-4 text-indigo-200" />
+                        <Briefcase className="size-4 text-gray-300" />
                         <span className="text-white">{user.businessName}</span>
                       </div>
                     )}
                     {user.businessAddress && (
                       <div className="flex items-center gap-2 text-sm">
-                        <MapPinned className="size-4 text-indigo-200" />
+                        <MapPinned className="size-4 text-gray-300" />
                         <span className="text-white">{user.businessAddress}</span>
                       </div>
                     )}
                     {user.createdAt && (
                       <div className="flex items-center gap-2 text-sm">
-                        <Clock className="size-4 text-indigo-200" />
+                        <Clock className="size-4 text-gray-300" />
                         <span className="text-white">
                           Joined: {formatDate(user.createdAt)}
                         </span>
@@ -184,10 +198,10 @@ const StudentNavbar = ({ isMobile }) => {
                     )}
                   </div>
 
-                  <div className="border-t border-indigo-700 pt-3 space-y-2">
+                  <div className="border-t border-gray-600/50 pt-3 space-y-2">
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 text-sm font-semibold text-white hover:text-red-200 w-full py-2 cursor-pointer"
+                      className="flex items-center gap-2 text-sm font-semibold text-white hover:text-red-200 w-full py-2 cursor-pointer transition-all duration-300 p-2 rounded-lg hover:bg-gray-700/60"
                     >
                       <LogOut className="size-4" />
                       Log Out
@@ -200,7 +214,7 @@ const StudentNavbar = ({ isMobile }) => {
         ) : (
           <Link 
             href="/hostel-owners/signin"
-            className="text-sm font-medium text-white hover:text-indigo-200"
+            className="text-sm font-medium text-white hover:text-gray-100 transition-all duration-300 p-2 rounded-lg hover:bg-gray-700/60"
           >
             Sign in
           </Link>
