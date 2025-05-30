@@ -316,11 +316,11 @@ export default function HomePage() {
                 <Link
                   href={
                     user.userType === "admin"
-                      ? "/admin/dashboard"
+                      ? "/admin-dashboard"
                       : user.userType === "staff"
-                        ? "/staff/dashboard"
+                        ? "/staff-dashboard"
                         : user.userType === "student"
-                          ? "/student/dashboard"
+                          ? "/student-dashboard"
                           : "/dashboard"
                   }
                 >

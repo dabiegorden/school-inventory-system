@@ -1,213 +1,244 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Building, LogOut, Mail, Phone, Briefcase, Clock, MapPinned } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { User, Mail, Shield, BadgeIcon as IdCard, LayoutDashboard, LogOut, ChevronDown, Clock } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
-const AdminNavbar = ({ isMobile }) => {
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const profileMenuRef = useRef(null);
-  const router = useRouter();
+const StaffNavbar = ({ isMobile }) => {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
 
   // Fetch current user on component mount
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/me", {
+        // First check localStorage for user data
+        const storedUser = localStorage.getItem("user")
+        if (storedUser) {
+          const userData = JSON.parse(storedUser)
+          if (userData.userType === "staff") {
+            setUser(userData)
+          }
+        }
+
+        // Then verify with backend
+        const response = await fetch("/api/auth/check", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include", // Important for sending cookies
-        });
+          credentials: "include",
+        })
 
         if (response.ok) {
-          const data = await response.json();
-          if (data.user && data.user.role === "hostel-owner") {
-            // Fetch complete hostel owner profile
-            const profileResponse = await fetch(
-              "http://localhost:5000/api/hostel-owners/profile",
-              {
-                method: "GET",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                credentials: "include",
-              }
-            );
-
-            if (profileResponse.ok) {
-              const profileData = await profileResponse.json();
-              setUser(profileData.hostelOwner);
-            } else {
-              // If profile fetch fails, use basic session data
-              setUser(data.user);
-            }
+          const data = await response.json()
+          if (data.success && data.authenticated && data.user.userType === "staff") {
+            setUser(data.user)
+            // Update localStorage with fresh data
+            localStorage.setItem("user", JSON.stringify(data.user))
+          } else {
+            // Clear localStorage if not authenticated as admin
+            localStorage.removeItem("user")
+            setUser(null)
+            router.push("/login")
           }
+        } else {
+          // Clear localStorage on error
+          localStorage.removeItem("user")
+          setUser(null)
+          router.push("/login")
         }
       } catch (error) {
-        console.error("Error fetching current user:", error);
+        console.error("Error fetching current user:", error)
+        // Clear localStorage on error
+        localStorage.removeItem("user")
+        setUser(null)
+        router.push("/login")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchCurrentUser();
-  }, []);
+    fetchCurrentUser()
+  }, [router])
 
-  // Handle click outside to close menu
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        profileMenuRef.current &&
-        !profileMenuRef.current.contains(event.target)
-      ) {
-        setProfileMenuOpen(false);
-      }
-    };
-
-    // Add event listener
-    document.addEventListener("mousedown", handleClickOutside);
-
-    // Clean up
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Implement logout functionality
-  const handleLogout = async (e) => {
-    e.preventDefault();
-
+  const handleLogout = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         credentials: "include",
-      });
+      })
 
-      if (response.ok) {
-        // Clear the user state
-        setUser(null);
-        // Close any open menus
-        setProfileMenuOpen(false);
-        // Redirect to login page
-        router.push("/home");
+      const result = await response.json()
+
+      if (result.success) {
+        // Clear local storage
+        localStorage.removeItem("user")
+        // Clear user state
+        setUser(null)
+        // Redirect to home page
+        router.push("/")
       } else {
-        console.error("Logout failed");
+        console.error("Logout failed:", result.message)
       }
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("Logout error:", error)
     }
-  };
+  }
+
+  const getDashboardLink = () => {
+    return "/staff-dashboard"
+  }
+
+  const getUserInitials = () => {
+    if (user?.name) {
+      return user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    return user?.username?.slice(0, 2).toUpperCase() || "A"
+  }
+
+  const getUserId = () => {
+    return user?.staffId || user?.username || "N/A"
+  }
 
   // Format date for display
   const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
+    if (!dateString) return ""
+    const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
-  };
+    })
+  }
 
   return (
-    <nav className="w-full bg-gradient-to-b from-indigo-800 to-indigo-900 py-3 px-6 h-full flex items-center justify-end shadow">
-      <div className="space-x-4">
+    <nav className="w-full bg-gradient-to-b from-gray-800/90 via-gray-800/70 to-gray-900/90 backdrop-blur-lg py-3 px-6 h-full flex items-center justify-end shadow-2xl relative overflow-hidden">
+      {/* Subtle background pattern - matching sidebar */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-2 right-10 w-16 h-16 bg-blue-500 rounded-full mix-blend-multiply filter blur-2xl animate-pulse"></div>
+        <div className="absolute bottom-2 left-10 w-12 h-12 bg-purple-500 rounded-full mix-blend-multiply filter blur-2xl animate-pulse delay-1000"></div>
+      </div>
+
+      <div className="space-x-4 relative z-10">
         {loading ? (
-          <div className="text-sm text-white">Loading...</div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
+            <span className="text-sm text-gray-300">Loading...</span>
+          </div>
         ) : user ? (
-          <div className="relative" ref={profileMenuRef}>
-            <button
-              type="button"
-              className="flex items-center cursor-pointer text-sm gap-2 font-medium text-white hover:text-gray-100 focus:outline-none"
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-            >
-              <div className="bg-indigo-600 text-white p-2 rounded-full">
-                <Building className="size-5" />
-              </div>
-              <span>{user.name || "Hostel Owner"}</span>
-              <ChevronDown className={`w-4 h-4 text-white ${profileMenuOpen ? 'transform rotate-180' : ''} transition-transform duration-200`} />
-            </button>
-            
-            {profileMenuOpen && (
-              <div className="absolute right-0 z-10 mt-3 w-80 overflow-hidden rounded-lg bg-gradient-to-b from-indigo-800 to-indigo-900 ring-1 shadow-lg ring-indigo-900/50">
-                <div className="p-4">
-                  <div className="border-b border-indigo-700 pb-3 mb-3">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="bg-indigo-600 text-white p-3 rounded-full">
-                        <Building className="size-6" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">{user.name}</p>
-                        <p className="text-sm text-indigo-200">Hostel Owner</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="size-4 text-indigo-200" />
-                      <span className="text-white">{user.email}</span>
-                    </div>
-                    {user.phoneNumber && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="size-4 text-indigo-200" />
-                        <span className="text-white">{user.phoneNumber}</span>
-                      </div>
-                    )}
-                    {user.businessName && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Briefcase className="size-4 text-indigo-200" />
-                        <span className="text-white">{user.businessName}</span>
-                      </div>
-                    )}
-                    {user.businessAddress && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPinned className="size-4 text-indigo-200" />
-                        <span className="text-white">{user.businessAddress}</span>
-                      </div>
-                    )}
-                    {user.createdAt && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="size-4 text-indigo-200" />
-                        <span className="text-white">
-                          Joined: {formatDate(user.createdAt)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-indigo-700 pt-3 space-y-2">
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-2 text-sm font-semibold text-white hover:text-red-200 w-full py-2 cursor-pointer"
-                    >
-                      <LogOut className="size-4" />
-                      Log Out
-                    </button>
+          <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="flex items-center gap-3 px-3 py-2 h-auto bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600 hover:border-gray-500 transition-all duration-200"
+              >
+                <Avatar className="h-8 w-8 bg-gradient-to-r from-red-500 to-red-600">
+                  <AvatarFallback className="bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col items-start">
+                  <span className="text-gray-200 font-medium text-sm">{user?.name || user?.username}</span>
+                  <span className="text-xs text-red-400 capitalize">Staff</span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400 transition-transform duration-200" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 bg-gray-800 border-gray-700 shadow-xl" sideOffset={5}>
+              <DropdownMenuLabel className="px-4 py-3 bg-gray-750">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 bg-gradient-to-r from-red-500 to-red-600">
+                    <AvatarFallback className="bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-gray-100 font-semibold">{user?.name || user?.username}</span>
+                    <span className="text-sm text-red-400 capitalize">Staff</span>
                   </div>
                 </div>
+              </DropdownMenuLabel>
+
+              <DropdownMenuSeparator className="bg-gray-700" />
+
+              {/* User Information */}
+              <div className="px-4 py-2 space-y-2">
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-300">{user?.email || "No email"}</span>
+                </div>
+
+                <div className="flex items-center gap-3 text-sm">
+                  <Shield className="h-4 w-4 text-red-400" />
+                  <span className="text-gray-300">Staff</span>
+                </div>
+
+                <div className="flex items-center gap-3 text-sm">
+                  <IdCard className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-300">{getUserId()}</span>
+                </div>
+
+                {user?.phone && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-300">{user.phone}</span>
+                  </div>
+                )}
+
+                {user?.createdAt && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-300">Joined: {formatDate(user.createdAt)}</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+              <DropdownMenuSeparator className="bg-gray-700" />
+
+              {/* Logout */}
+              <DropdownMenuItem
+                className="cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-900/20 focus:text-red-300 focus:bg-red-900/20"
+                onClick={handleLogout}
+              >
+                <div className="flex items-center gap-3 px-1 py-1">
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
-          <Link 
-            href="/hostel-owners/signin"
-            className="text-sm font-medium text-white hover:text-indigo-200"
+          <Link
+            href="/login"
+            className="text-sm font-medium text-gray-300 hover:text-white px-4 py-2 rounded-xl
+                       hover:bg-gray-700/60 hover:backdrop-blur-sm border border-transparent hover:border-gray-600/30
+                       transition-all duration-500 transform hover:scale-105"
           >
             Sign in
           </Link>
         )}
       </div>
     </nav>
-  );
-};
+  )
+}
 
-export default AdminNavbar;
+export default StaffNavbar

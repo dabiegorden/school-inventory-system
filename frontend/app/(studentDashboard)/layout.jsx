@@ -72,7 +72,7 @@ const StudentLayout = ({ children }) => {
                   </div>
                   <div className="absolute inset-0 rounded-lg bg-blue-400/30 blur-lg"></div>
                 </div>
-                <h1 className="text-sm sm:text-base md:text-xl font-bold truncate text-white">Staff Portal</h1>
+                <h1 className="text-sm sm:text-base md:text-xl font-bold truncate text-white">Students Portal</h1>
               </div>
             </div>
             <div className="flex-1 overflow-hidden">

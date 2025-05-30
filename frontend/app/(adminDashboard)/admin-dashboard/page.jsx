@@ -17,6 +17,9 @@ import {
   Plus,
   RefreshCw,
   Eye,
+  XCircle,
+  Truck,
+  ShoppingCart,
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -26,7 +29,22 @@ export default function AdminDashboard() {
     students: { total: 0, active: 0 },
     staff: { total: 0, active: 0 },
     inventory: { total: 0, lowStock: 0, outOfStock: 0 },
-    requests: { total: 0, pending: 0, approved: 0, rejected: 0, distributed: 0 },
+    requests: {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      distributed: 0,
+      cancelled: 0,
+    },
+    stockRequests: {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      ordered: 0,
+      received: 0,
+    },
     recentActivity: [],
   })
   const [loading, setLoading] = useState(true)
@@ -40,37 +58,93 @@ export default function AdminDashboard() {
     try {
       setRefreshing(true)
 
-      // Fetch dashboard statistics from the admin endpoint
-      const response = await fetch("/api/admin/dashboard", {
-        credentials: "include",
-      })
+      // Fetch admin dashboard statistics including staff requests
+      const [dashboardResponse, requestsResponse, stockRequestsResponse, staffRequestsResponse] = await Promise.all([
+        fetch("/api/admin/dashboard", { credentials: "include" }),
+        fetch("/api/requests", { credentials: "include" }),
+        fetch("/api/stock-requests", { credentials: "include" }),
+        fetch("/api/staff/requests/all", { credentials: "include" }),
+      ])
 
-      const result = await response.json()
+      const dashboardResult = await dashboardResponse.json()
+      const requestsResult = await requestsResponse.json()
+      const stockRequestsResult = await stockRequestsResponse.json()
+      const staffRequestsResult = await staffRequestsResponse.json()
 
-      if (result.success) {
-        const { stats, recentActivities } = result.data
+      if (dashboardResult.success) {
+        const { stats, recentActivities } = dashboardResult.data
+
+        // Process regular requests data
+        let requestStats = {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          distributed: 0,
+          cancelled: 0,
+        }
+
+        if (requestsResult.success && Array.isArray(requestsResult.data)) {
+          const requests = requestsResult.data
+          requestStats = {
+            total: requests.length,
+            pending: requests.filter((r) => r.status === "pending").length,
+            approved: requests.filter((r) => r.status === "approved").length,
+            rejected: requests.filter((r) => r.status === "rejected").length,
+            distributed: requests.filter((r) => r.status === "distributed").length,
+            cancelled: requests.filter((r) => r.status === "cancelled").length,
+          }
+        }
+
+        // Add staff requests to regular requests stats
+        if (staffRequestsResult.success && Array.isArray(staffRequestsResult.data)) {
+          const staffRequests = staffRequestsResult.data
+          requestStats.total += staffRequests.length
+          requestStats.pending += staffRequests.filter((r) => r.status === "pending").length
+          requestStats.approved += staffRequests.filter((r) => r.status === "approved").length
+          requestStats.rejected += staffRequests.filter((r) => r.status === "rejected").length
+          requestStats.distributed += staffRequests.filter((r) => r.status === "distributed").length
+          requestStats.cancelled += staffRequests.filter((r) => r.status === "cancelled").length
+        }
+
+        // Process stock requests data
+        let stockRequestStats = {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+          ordered: 0,
+          received: 0,
+        }
+
+        if (stockRequestsResult.success && Array.isArray(stockRequestsResult.data)) {
+          const stockRequests = stockRequestsResult.data
+          stockRequestStats = {
+            total: stockRequests.length,
+            pending: stockRequests.filter((r) => r.status === "pending").length,
+            approved: stockRequests.filter((r) => r.status === "approved").length,
+            rejected: stockRequests.filter((r) => r.status === "rejected").length,
+            ordered: stockRequests.filter((r) => r.status === "ordered").length,
+            received: stockRequests.filter((r) => r.status === "received").length,
+          }
+        }
 
         setDashboardData({
           students: {
             total: stats.totalStudents,
-            active: stats.totalStudents, // Assuming all fetched students are active
+            active: stats.totalStudents,
           },
           staff: {
             total: stats.totalStaff,
-            active: stats.totalStaff, // Assuming all fetched staff are active
+            active: stats.totalStaff,
           },
           inventory: {
             total: stats.totalItems,
             lowStock: stats.lowStockItems,
-            outOfStock: 0, // Can be added to backend if needed
+            outOfStock: 0,
           },
-          requests: {
-            total: stats.pendingRequests,
-            pending: stats.pendingRequests,
-            approved: 0, // Can be enhanced in backend
-            rejected: 0, // Can be enhanced in backend
-            distributed: 0, // Can be enhanced in backend
-          },
+          requests: requestStats,
+          stockRequests: stockRequestStats,
           recentActivity: recentActivities || [],
         })
       } else {
@@ -167,7 +241,7 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* Stats Grid */}
+      {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total Students"
@@ -230,9 +304,9 @@ export default function AdminDashboard() {
         />
 
         <StatCard
-          title="Pending Requests"
-          value={dashboardData.requests.pending}
-          subtitle={`${dashboardData.requests.total} total requests`}
+          title="Total Requests"
+          value={dashboardData.requests.total + dashboardData.stockRequests.total}
+          subtitle={`${dashboardData.requests.pending + dashboardData.stockRequests.pending} pending review • ${dashboardData.requests.total} regular • ${dashboardData.stockRequests.total} stock`}
           icon={ClipboardList}
           color="from-yellow-500 to-orange-500"
           action={
@@ -243,50 +317,109 @@ export default function AdminDashboard() {
                 className="w-full text-xs border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
               >
                 <Eye className="h-3 w-3 mr-1" />
-                Review
+                Review All
               </Button>
             </Link>
           }
         />
       </div>
 
-      {/* Request Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-400">Pending Requests</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-400" />
+      {/* Request Status Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Regular Requests (now includes staff requests) */}
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-gray-100 flex items-center">
+              <ClipboardList className="h-5 w-5 mr-2 text-blue-400" />
+              Regular Requests Status
+            </CardTitle>
+            <CardDescription className="text-gray-400">Student and staff inventory requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-300">{dashboardData.requests.pending}</div>
-            <p className="text-xs text-yellow-400/70">Awaiting approval</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 text-yellow-400 mr-2" />
+                  <span className="text-sm text-yellow-400">Pending</span>
+                </div>
+                <span className="text-lg font-bold text-yellow-300">{dashboardData.requests.pending}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
+                  <span className="text-sm text-green-400">Approved</span>
+                </div>
+                <span className="text-lg font-bold text-green-300">{dashboardData.requests.approved}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                <div className="flex items-center">
+                  <Truck className="h-4 w-4 text-blue-400 mr-2" />
+                  <span className="text-sm text-blue-400">Distributed</span>
+                </div>
+                <span className="text-lg font-bold text-blue-300">{dashboardData.requests.distributed}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                <div className="flex items-center">
+                  <XCircle className="h-4 w-4 text-red-400 mr-2" />
+                  <span className="text-sm text-red-400">Rejected</span>
+                </div>
+                <span className="text-lg font-bold text-red-300">{dashboardData.requests.rejected}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-400">Approved Requests</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-400" />
+        {/* Stock Requests */}
+        <Card className="bg-gray-800/50 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-gray-100 flex items-center">
+              <ShoppingCart className="h-5 w-5 mr-2 text-purple-400" />
+              Stock Requests Status
+            </CardTitle>
+            <CardDescription className="text-gray-400">Purchase and replenishment requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-300">{dashboardData.requests.approved}</div>
-            <p className="text-xs text-green-400/70">Successfully processed</p>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 text-yellow-400 mr-2" />
+                  <span className="text-sm text-yellow-400">Pending</span>
+                </div>
+                <span className="text-lg font-bold text-yellow-300">{dashboardData.stockRequests.pending}</span>
+              </div>
 
-        <Card className="bg-gradient-to-br from-red-500/10 to-pink-500/10 border-red-500/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-400">Low Stock Items</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-300">{dashboardData.inventory.lowStock}</div>
-            <p className="text-xs text-red-400/70">Need restocking</p>
+              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-400 mr-2" />
+                  <span className="text-sm text-green-400">Approved</span>
+                </div>
+                <span className="text-lg font-bold text-green-300">{dashboardData.stockRequests.approved}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                <div className="flex items-center">
+                  <ShoppingCart className="h-4 w-4 text-purple-400 mr-2" />
+                  <span className="text-sm text-purple-400">Ordered</span>
+                </div>
+                <span className="text-lg font-bold text-purple-300">{dashboardData.stockRequests.ordered}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                <div className="flex items-center">
+                  <Package className="h-4 w-4 text-blue-400 mr-2" />
+                  <span className="text-sm text-blue-400">Received</span>
+                </div>
+                <span className="text-lg font-bold text-blue-300">{dashboardData.stockRequests.received}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity and Quick Actions */}
+      {/* Alerts and Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity */}
         <Card className="lg:col-span-2 bg-gray-800/50 border-gray-700">
@@ -352,6 +485,15 @@ export default function AdminDashboard() {
                 Generate Report
               </Button>
             </Link>
+
+            {dashboardData.requests.pending > 0 && (
+              <Link href="/admin-dashboard/requests?filter=pending">
+                <Button className="w-full justify-start bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-300 border-yellow-500/30">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Review Pending ({dashboardData.requests.pending})
+                </Button>
+              </Link>
+            )}
 
             {dashboardData.inventory.lowStock > 0 && (
               <Link href="/admin-dashboard/inventory?filter=low-stock">

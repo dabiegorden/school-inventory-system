@@ -345,6 +345,7 @@ export default function ReportsPage() {
       if (result.success) {
         toast.success("Report generated successfully")
         fetchReports()
+        setIsViewDialogOpen(false)
       } else {
         toast.error(result.message || "Failed to generate report")
       }
@@ -373,6 +374,7 @@ export default function ReportsPage() {
         a.click()
         window.URL.revokeObjectURL(url)
         toast.success("Report downloaded successfully")
+        setIsViewDialogOpen(false)
       } else {
         toast.error("Failed to download report")
       }

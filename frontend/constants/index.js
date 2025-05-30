@@ -92,13 +92,13 @@ export const StaffSidebarLinks = [
   {
     id: 3,
     title: "Requests",
-    url: "//staff-dashboard/requests",
+    url: "/staff-dashboard/requests",
     icon: ClipboardList,
   },
   {
     id: 4,
     title: "System Settings",
-    url: "/admin-dashboard/settings",
+    url: "/staff-dashboard/settings",
     icon: Settings,
   },
 ];
